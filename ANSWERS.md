@@ -108,22 +108,30 @@ graph TD
 
 ### Scenario A — Politique de menage
 
-- Fichiers modifies : ...
-- Modules impactes : ...
-- Principe en jeu : ...
+- Fichiers modifies : 1 seul (`src/Hotel.Housekeeping/ICleaningPolicy.cs`)
+- Modules impactes : 1 seul (`Hotel.Housekeeping`)
+- Principe en jeu : CCP. Tous les éléments concernant la gestion de l'entretien (et la fréquence de ménage) ont été regroupés ensemble et fermés au changement par rapport aux autres domaines de l'application.
 
 ### Scenario B — Taux de TVA
 
-- Fichiers modifies : ...
-- Modules impactes : ...
+- Fichiers modifies : 1 seul (`src/Hotel.Billing/TaxCalculator.cs`)
+- Modules impactes : 1 seul (`Hotel.Billing`)
 
 ### Scenario C — Push notification
 
-- Fichiers crees : ...
-- Fichiers modifies : ...
-- Modules metier impactes : ...
-- Principe en jeu : ...
+- Fichiers crees : 1 seul (`src/Hotel.Infrastructure/PushNotificationSender.cs` qui implémente `IConfirmationSender`).
+- Fichiers modifies : 1 seul (Le "Composition Root" : `src/Hotel.Runner/Program.cs` ou `ServiceRegistration` pour configurer l'injection de cette nouvelle notification).
+- Modules metier impactes : 0 (Aucun).
+- Principe en jeu : L'architecture **Ports & Adapters (et Dependency Inversion Principle)**. Le module de réservation déclare son besoin via un contrat public (le Port `IConfirmationSender`). Tant que l'infrastructure fournit une classe qui respecte ce contrat (l'Adaptateur), le métier n'a pas à être modifié (respect de l'Open/Closed Principle).
+
+### Analyse
+
+- **Quel principe garantit que le scenario A ne touche qu'un seul module ?**
+  Le **CCP (Common Closure Principle)**. Tous les éléments concernant la gestion de l'entretien (et la fréquence de ménage) ont été regroupés ensemble.
+- **Quel principe garantit que le scenario C n'impacte pas les modules metier ?**
+  Le principe d'**Inversion de Dépendance (DIP)** propre à l'architecture **Ports et Adaptateurs**. Le métier ne dépend que de ses propres abstractions (les Ports, ici `IConfirmationSender`). L'ajout d'une notification Push est un nouvel Adaptateur fourni par l'Infrastructure (Détail) sans impacter le noyau (Métier).
 
 ### Comparaison avec le code de depart
 
-(Paragraphe d'analyse)
+Dans le code monolithique initial, aucun de ces principes n'était respecté de manière stricte (tout était mélangé et public). Un changement de TVA aurait exigé de recompiler l'application entière, tout comme l'ajout des notifications push aurait pu introduire des bugs dans le ménage.
+Aujourd'hui, l'utilisation de modules `internal`, le respect des principes CCP/CRP/REP, et l'injection de dépendances garantissent un code modulaire, robuste et dont l'évolution est localisée sans risque d'effets de bord.
