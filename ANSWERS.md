@@ -39,6 +39,38 @@
 
 ### 1.2 Graphe de dependances
 
+Schéma MERMAID :
+
+```mermaid
+graph TD
+  BillingService --> InvoiceGenerator
+  BillingService --> IReservationRepository
+  BookingService --> IReservationRepository
+  BookingService --> RoomAssigner
+  BookingService --> IConfirmationSender
+  EmailSender -.-> IConfirmationSender
+  HousekeepingScheduler --> IReservationRepository
+  HousekeepingScheduler --> ICleaningPolicy
+  HousekeepingScheduler --> ICleaningNotifier
+  FlexibleCancellationPolicy -.-> ICancellationPolicy
+  ModerateCancellationPolicy -.-> ICancellationPolicy
+  StrictCancellationPolicy -.-> ICancellationPolicy
+  NonRefundableCancellationPolicy -.-> ICancellationPolicy
+  StandardCleaningPolicy -.-> ICleaningPolicy
+  VipCleaningPolicy -.-> ICleaningPolicy
+  InMemoryReservationStore -.-> IReservationRepository
+  InMemoryRoomStore -.-> IRoomRepository
+  InvoiceGenerator --> PricingStrategyFactory
+  InvoiceGenerator --> TaxCalculator
+  InvoiceGenerator --> IRoomRepository
+  StandardPricingStrategy -.-> IPricingStrategy
+  SuitePricingStrategy -.-> IPricingStrategy
+  FamilyPricingStrategy -.-> IPricingStrategy
+  RoomAssigner --> IRoomRepository
+  RoomAssigner --> IReservationRepository
+  SmsSender -.-> ICleaningNotifier
+```
+
 ![Schéma](imgs/Capture%20d’écran%202026-04-13%20à%2011.31.42.png)
 
 ### 1.3 Clusters identifies
@@ -58,13 +90,17 @@
 
 | Module | Justification |
 |-------|---------------|
-| ... | ... |
+| **Hotel.Booking** | Gère les règles d'accueil, l'assignation de chambre et l'annulation. Isolé du reste pour ne gérer que la logique de prise de réservation. |
+| **Hotel.Billing** | Regroupe la logique financière (génération de factures, calcul des taxes et application des stratégies de prix). |
+| **Hotel.Housekeeping** | Centralise la gestion de l'entretien (plannings et politiques de nettoyage). Totalement autonome vis-à-vis des tarifs ou des annulations. |
+| **Hotel.Infrastructure** | Contient tous les adaptateurs techniques (Base en mémoire, envois d'Email/SMS). Il traduit les entités complètes en DTOs spécifiques pour chaque module. |
+| **Hotel.Runner** | Le "Composition Root" (Point d'entrée). Il orchestre et branche l'infrastructure sur les interfaces métiers sans connaître les détails internes (logique métier en `internal`). |
 
 ### Justification par principe
 
-- **CCP** : (expliquez pourquoi vous avez regroupe certaines classes)
-- **CRP** : (expliquez pourquoi vous avez separe certaines classes)
-- **REP** : (expliquez la coherence de chaque module)
+- **CCP** : J'ai regroupé `InvoiceGenerator` et `TaxCalculator` dans `Hotel.Billing` car un changement de législation fiscale impactera ces deux classes simultanément. Le changement sera restreint à ce seul module.
+- **CRP** : J'ai séparé le gros `IReservationRepository` en interfaces spécifiques (ex: `IHousekeepingReservationRepository`). Le ménage (`Housekeeping`) ne dépend plus des logiques de création (`Add()`) de réservation dont il ne se sert pas.
+- **REP** : Chaque module a une sémantique forte et regroupe un domaine cohérent. On pourrait versionner `.Billing` et le distribuer dans un package NuGet pour qu'il soit réutilisé par un autre logiciel comptable du réseau hôtelier.
 
 ---
 
